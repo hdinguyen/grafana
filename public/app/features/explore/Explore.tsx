@@ -24,11 +24,11 @@ import { ensureQueries, generateQueryKey, hasQuery } from './utils/query';
 
 const MAX_HISTORY_ITEMS = 100;
 
-function makeHints(hints) {
+function makeHints(transactions: QueryTransaction[]) {
   const hintsByIndex = [];
-  hints.forEach(hint => {
-    if (hint) {
-      hintsByIndex[hint.index] = hint;
+  transactions.forEach(qt => {
+    if (qt.hints && qt.hints.length > 0) {
+      hintsByIndex[qt.rowIndex] = qt.hints[0];
     }
   });
   return hintsByIndex;
@@ -112,7 +112,6 @@ export class Explore extends React.PureComponent<ExploreProps, ExploreState> {
         graphRange: initialRange,
         history: [],
         queries: initialQueries,
-        queryHints: [],
         queryTransactions: [],
         range: initialRange,
         showingGraph: true,
@@ -245,7 +244,6 @@ export class Explore extends React.PureComponent<ExploreProps, ExploreState> {
       datasource: null,
       datasourceError: null,
       datasourceLoading: true,
-      queryHints: [],
       queryTransactions: [],
     });
     const datasourceName = option.value;
@@ -273,7 +271,6 @@ export class Explore extends React.PureComponent<ExploreProps, ExploreState> {
       this.setState(
         {
           queries: nextQueries,
-          queryHints: [],
           queryTransactions: nextQueryTransactions,
         },
         this.onSubmit
@@ -294,7 +291,6 @@ export class Explore extends React.PureComponent<ExploreProps, ExploreState> {
     this.setState(
       {
         queries: ensureQueries(),
-        queryHints: [],
         queryTransactions: [],
       },
       this.saveState
@@ -455,7 +451,6 @@ export class Explore extends React.PureComponent<ExploreProps, ExploreState> {
       const nextQueryTransactions = [...remainingTransactions, transaction];
 
       return {
-        queryHints: [],
         queryTransactions: nextQueryTransactions,
       };
     });
@@ -467,7 +462,6 @@ export class Explore extends React.PureComponent<ExploreProps, ExploreState> {
     transactionId: string,
     result: any,
     latency: number,
-    hints: any[],
     queries: string[],
     datasourceId: string
   ) {
@@ -481,8 +475,15 @@ export class Explore extends React.PureComponent<ExploreProps, ExploreState> {
       const { history, queryTransactions } = state;
 
       // Transaction might have been discarded
-      if (!queryTransactions.find(qt => qt.id === transactionId)) {
+      const transaction = queryTransactions.find(qt => qt.id === transactionId);
+      if (!transaction) {
         return null;
+      }
+
+      // Get query hints
+      let hints;
+      if (datasource.getQueryHints) {
+        hints = datasource.getQueryHints(transaction.query, result);
       }
 
       // Mark transactions as complete
@@ -490,6 +491,7 @@ export class Explore extends React.PureComponent<ExploreProps, ExploreState> {
         if (qt.id === transactionId) {
           return {
             ...qt,
+            hints,
             latency,
             result,
             done: true,
@@ -502,7 +504,6 @@ export class Explore extends React.PureComponent<ExploreProps, ExploreState> {
 
       return {
         history: nextHistory,
-        queryHints: hints,
         queryTransactions: nextQueryTransactions,
       };
     });
@@ -559,8 +560,7 @@ export class Explore extends React.PureComponent<ExploreProps, ExploreState> {
           const res = await datasource.query(transaction.options);
           const latency = Date.now() - now;
           const results = makeTimeSeriesList(res.data, transaction.options);
-          const queryHints = res.hints ? makeHints(res.hints) : [];
-          this.completeQueryTransaction(transaction.id, results, latency, queryHints, queries, datasourceId);
+          this.completeQueryTransaction(transaction.id, results, latency, queries, datasourceId);
           this.setState({ graphRange: transaction.options.range });
         } catch (response) {
           console.error(response);
@@ -587,7 +587,7 @@ export class Explore extends React.PureComponent<ExploreProps, ExploreState> {
           const res = await datasource.query(transaction.options);
           const latency = Date.now() - now;
           const results = res.data[0];
-          this.completeQueryTransaction(transaction.id, results, latency, [], queries, datasourceId);
+          this.completeQueryTransaction(transaction.id, results, latency, queries, datasourceId);
         } catch (response) {
           console.error(response);
           const queryError = response.data ? response.data.error : response;
@@ -613,7 +613,7 @@ export class Explore extends React.PureComponent<ExploreProps, ExploreState> {
           const res = await datasource.query(transaction.options);
           const latency = Date.now() - now;
           const results = res.data;
-          this.completeQueryTransaction(transaction.id, results, latency, [], queries, datasourceId);
+          this.completeQueryTransaction(transaction.id, results, latency, queries, datasourceId);
         } catch (response) {
           console.error(response);
           const queryError = response.data ? response.data.error : response;
@@ -652,7 +652,6 @@ export class Explore extends React.PureComponent<ExploreProps, ExploreState> {
       graphRange,
       history,
       queries,
-      queryHints,
       queryTransactions,
       range,
       showingGraph,
@@ -680,6 +679,7 @@ export class Explore extends React.PureComponent<ExploreProps, ExploreState> {
       queryTransactions.filter(qt => qt.resultType === 'Logs' && qt.done).map(qt => qt.result)
     );
     const loading = queryTransactions.some(qt => !qt.done);
+    const queryHints = makeHints(queryTransactions);
 
     return (
       <div className={exploreClass} ref={this.getRef}>
