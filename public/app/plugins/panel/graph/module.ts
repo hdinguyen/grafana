@@ -13,7 +13,6 @@ import { axesEditorComponent } from './axes_editor';
 class GraphCtrl extends MetricsPanelCtrl {
   static template = template;
 
-  renderError: boolean;
   hiddenSeries: any = {};
   seriesList: any = [];
   dataList: any = [];
@@ -39,6 +38,8 @@ class GraphCtrl extends MetricsPanelCtrl {
         min: null,
         max: null,
         format: 'short',
+        labelMappings: [],
+        mappedLabelOnly: false,
       },
       {
         label: null,
@@ -47,6 +48,8 @@ class GraphCtrl extends MetricsPanelCtrl {
         min: null,
         max: null,
         format: 'short',
+        labelMappings: [],
+        mappedLabelOnly: false,
       },
     ],
     xaxis: {
@@ -134,9 +137,9 @@ class GraphCtrl extends MetricsPanelCtrl {
   }
 
   onInitEditMode() {
-    this.addEditorTab('Display', 'public/app/plugins/panel/graph/tab_display.html', 4);
     this.addEditorTab('Axes', axesEditorComponent, 2);
     this.addEditorTab('Legend', 'public/app/plugins/panel/graph/tab_legend.html', 3);
+    this.addEditorTab('Display', 'public/app/plugins/panel/graph/tab_display.html', 4);
 
     if (config.alertingEnabled) {
       this.addEditorTab('Alert', alertTab, 5);
@@ -147,7 +150,7 @@ class GraphCtrl extends MetricsPanelCtrl {
 
   onInitPanelActions(actions) {
     actions.push({ text: 'Export CSV', click: 'ctrl.exportCsv()' });
-    actions.push({ text: 'Toggle legend', click: 'ctrl.toggleLegend()', shortcut: 'p l' });
+    actions.push({ text: 'Toggle legend', click: 'ctrl.toggleLegend()' });
   }
 
   issueQueries(datasource) {
@@ -156,16 +159,7 @@ class GraphCtrl extends MetricsPanelCtrl {
       panel: this.panel,
       range: this.range,
     });
-
-    /* Wait for annotationSrv requests to get datasources to
-     * resolve before issuing queries. This allows the annotations
-     * service to fire annotations queries before graph queries
-     * (but not wait for completion). This resolves
-     * issue 11806.
-     */
-    return this.annotationsSrv.datasourcePromises.then(r => {
-      return super.issueQueries(datasource);
-    });
+    return super.issueQueries(datasource);
   }
 
   zoomOut(evt) {
@@ -205,7 +199,7 @@ class GraphCtrl extends MetricsPanelCtrl {
         tip: 'No datapoints returned from data query',
       };
     } else {
-      for (const series of this.seriesList) {
+      for (let series of this.seriesList) {
         if (series.isOutsideRange) {
           this.dataWarning = {
             title: 'Data points outside time range',
@@ -235,7 +229,7 @@ class GraphCtrl extends MetricsPanelCtrl {
       return;
     }
 
-    for (const series of this.seriesList) {
+    for (let series of this.seriesList) {
       series.applySeriesOverrides(this.panel.seriesOverrides);
 
       if (series.unit) {
@@ -264,14 +258,14 @@ class GraphCtrl extends MetricsPanelCtrl {
   }
 
   toggleSeriesExclusiveMode(serie) {
-    const hidden = this.hiddenSeries;
+    var hidden = this.hiddenSeries;
 
     if (hidden[serie.alias]) {
       delete hidden[serie.alias];
     }
 
     // check if every other series is hidden
-    const alreadyExclusive = _.every(this.seriesList, value => {
+    var alreadyExclusive = _.every(this.seriesList, value => {
       if (value.alias === serie.alias) {
         return true;
       }
@@ -297,7 +291,7 @@ class GraphCtrl extends MetricsPanelCtrl {
   }
 
   toggleAxis(info) {
-    let override = _.find(this.panel.seriesOverrides, { alias: info.alias });
+    var override = _.find(this.panel.seriesOverrides, { alias: info.alias });
     if (!override) {
       override = { alias: info.alias };
       this.panel.seriesOverrides.push(override);
@@ -321,13 +315,13 @@ class GraphCtrl extends MetricsPanelCtrl {
   }
 
   legendValuesOptionChanged() {
-    const legend = this.panel.legend;
+    var legend = this.panel.legend;
     legend.values = legend.min || legend.max || legend.avg || legend.current || legend.total;
     this.render();
   }
 
   exportCsv() {
-    const scope = this.$scope.$new(true);
+    var scope = this.$scope.$new(true);
     scope.seriesList = this.seriesList;
     this.publishAppEvent('show-modal', {
       templateHtml: '<export-data-modal data="seriesList"></export-data-modal>',

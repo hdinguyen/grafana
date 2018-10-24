@@ -50,10 +50,10 @@ export default function GraphTooltip(this: any, elem, dashboard, scope, getSerie
   };
 
   this.renderAndShow = (absoluteTime, innerHtml, pos, xMode) => {
-    if (xMode === 'time') {
-      innerHtml = '<div class="graph-tooltip-time">' + absoluteTime + '</div>' + innerHtml;
-    }
-    $tooltip.html(innerHtml).place_tt(pos.pageX + 20, pos.pageY);
+//    if (xMode === 'time') {
+//      innerHtml = '<div class="graph-tooltip-time">' + absoluteTime + '</div>' + innerHtml;
+//    }
+//    $tooltip.html(innerHtml).place_tt(pos.pageX + 20, pos.pageY);
   };
 
   this.getMultiSeriesPlotHoverInfo = function(seriesList, pos) {

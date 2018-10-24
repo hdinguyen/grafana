@@ -9,7 +9,7 @@ export class AxesEditorCtrl {
   xAxisStatOptions: any;
   xNameSegment: any;
 
-  /** @ngInject */
+  /** @ngInject **/
   constructor(private $scope, private $q) {
     this.panelCtrl = $scope.ctrl;
     this.panel = this.panelCtrl.panel;
@@ -67,16 +67,48 @@ export class AxesEditorCtrl {
   }
 
   getDataFieldNames(onlyNumbers) {
-    const props = this.panelCtrl.processor.getDataFieldNames(this.panelCtrl.dataList, onlyNumbers);
-    const items = props.map(prop => {
+    var props = this.panelCtrl.processor.getDataFieldNames(this.panelCtrl.dataList, onlyNumbers);
+    var items = props.map(prop => {
       return { text: prop, value: prop };
     });
 
     return this.$q.when(items);
   }
+
+  addYaxisLabelMapping(axisIndex) {
+    this.getYaxisLabelMappings(axisIndex).push({
+      value: undefined,
+      label: undefined,
+    });
+    this.panelCtrl.render();
+  }
+
+  removeYaxisLabelMapping(axisIndex, mappingIndex) {
+    this.getYaxisLabelMappings(axisIndex).splice(mappingIndex, 1);
+    if (!this.hasYaxisLabelMapping(axisIndex)) {
+      this.getYaxis(axisIndex).mappedLabelOnly = false;
+    }
+    this.panelCtrl.render();
+  }
+
+  hasYaxisLabelMapping(index) {
+    return this.getYaxisLabelMappings(index).length > 0;
+  }
+
+  getYaxisLabelMappings(index) {
+    const yaxis = this.panel.yaxes[index];
+    if (!yaxis.labelMappings) {
+      yaxis.labelMappings = [];
+    }
+    return yaxis.labelMappings;
+  }
+
+  getYaxis(index) {
+    return this.panel.yaxes[index];
+  }
 }
 
-/** @ngInject */
+/** @ngInject **/
 export function axesEditorComponent() {
   'use strict';
   return {
